@@ -27,4 +27,5 @@
     <string name="phone_number_hint">Numéro de téléphone</string>
     <string name="invalid_phone_number">Numéro de téléphone invalide.</string>
     <string name="verify_email_message">Votre adresse e-mail n\'a pas été vérifiée.</string>
+    <string name="sign_out">Se déconnecter</string>
 </resources>
