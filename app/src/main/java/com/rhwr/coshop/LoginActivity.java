@@ -15,8 +15,11 @@ import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.FirebaseNetworkException;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException;
 import com.google.firebase.auth.FirebaseUser;
 
 public class LoginActivity extends AppCompatActivity {
@@ -25,7 +28,6 @@ public class LoginActivity extends AppCompatActivity {
     private EditText emailEditText;
     private EditText passwordEditText;
     private Button signInButton;
-    private Button createAccountButton;
     private ProgressBar progressBar;
 
     private FirebaseAuth mAuth;
@@ -35,28 +37,17 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        // Initialisation des éléments de l'interface utilisateur
         emailEditText = findViewById(R.id.emailEditText);
         passwordEditText = findViewById(R.id.passwordEditText);
         signInButton = findViewById(R.id.signInButton);
-        createAccountButton = findViewById(R.id.createAccountButton);
         progressBar = findViewById(R.id.progressBar);
 
-        // Initialisation de Firebase Authentication
         mAuth = FirebaseAuth.getInstance();
 
-        // Configuration des listeners pour les boutons
         signInButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 signIn(emailEditText.getText().toString(), passwordEditText.getText().toString());
-            }
-        });
-
-        createAccountButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                createAccount(emailEditText.getText().toString(), passwordEditText.getText().toString());
             }
         });
     }
@@ -64,66 +55,50 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     public void onStart() {
         super.onStart();
-        // Vérifier si l'utilisateur est déjà connecté
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-        if (currentUser != null && currentUser.isEmailVerified()) {
-            // L'utilisateur est connecté et son email est vérifié, naviguer vers MainActivity
-            navigateToMainActivity();
-        } else if (currentUser != null && !currentUser.isEmailVerified()) {
-            Toast.makeText(LoginActivity.this, R.string.verify_email_message,
-                    Toast.LENGTH_SHORT).show();
-        }
+        // Ne plus vérifier la connexion ici, l'utilisateur arrive sur cet écran s'il clique sur "Se connecter"
     }
 
-    private void navigateToMainActivity() {
-        Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-        startActivity(intent);
-        finish();
-    }
-
-    private void sendEmailVerification() {
-        FirebaseUser user = mAuth.getCurrentUser();
-        if (user != null) {
-            user.sendEmailVerification()
-                    .addOnCompleteListener(new OnCompleteListener<Void>() {
-                        @Override
-                        public void onComplete(@NonNull Task<Void> task) {
-                            if (task.isSuccessful()) {
-                                Toast.makeText(LoginActivity.this, R.string.email_sent,
-                                        Toast.LENGTH_SHORT).show();
-                            } else {
-                                Log.e(TAG, "sendEmailVerification failed.", task.getException());
-                                Toast.makeText(LoginActivity.this, R.string.verification_failed,
-                                        Toast.LENGTH_SHORT).show();
-                            }
-                        }
-                    });
-        }
-    }
-    private void createAccount(String email, String password) {
-        Log.d(TAG, "createAccount:" + email);
+    private void signIn(String email, String password) {
+        Log.d(TAG, "signIn:" + email);
         if (!validateForm()) {
             return;
         }
 
         showProgressBar();
 
-        mAuth.createUserWithEmailAndPassword(email, password)
+        mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
                     @Override
                     public void onComplete(@NonNull Task<AuthResult> task) {
-                        if (task.isSuccessful()) {
-                            // L'inscription a réussi
-                            Log.d(TAG, "createUserWithEmail:success");
-                            FirebaseUser user = mAuth.getCurrentUser();
-                            sendEmailVerification();
-                        } else {
-                            // Si l'inscription échoue, afficher un message à l'utilisateur.
-                            Log.w(TAG, "createUserWithEmail:failure", task.getException());
-                            Toast.makeText(LoginActivity.this, R.string.auth_failed,
-                                    Toast.LENGTH_SHORT).show();
-                        }
                         hideProgressBar();
+                        if (task.isSuccessful()) {
+                            Log.d(TAG, "signInWithEmail:success");
+                            FirebaseUser user = mAuth.getCurrentUser();
+                            if (user != null && user.isEmailVerified()) {
+                                // L'utilisateur est connecté et l'e-mail est vérifié
+                                navigateToMainActivity();
+                            } else {
+                                // L'utilisateur est connecté mais l'e-mail n'est pas vérifié
+                                Toast.makeText(LoginActivity.this, R.string.verify_email_message,
+                                        Toast.LENGTH_LONG).show();
+                                mAuth.signOut(); // Déconnecter l'utilisateur non vérifié
+                            }
+                        } else {
+                            // Gestion des erreurs de connexion
+                            String errorMessage = getString(R.string.auth_failed);
+                            try {
+                                throw task.getException();
+                            } catch (FirebaseAuthInvalidCredentialsException e) {
+                                errorMessage = getString(R.string.error_invalid_credentials);
+                            } catch (FirebaseNetworkException e) {
+                                errorMessage = getString(R.string.error_network);
+                            } catch (FirebaseAuthException e) {
+                                errorMessage = getString(R.string.error_auth_generic) + ": " + e.getMessage();
+                            } catch (Exception e) {
+                                Log.e(TAG, "signInWithEmail:exception", e);
+                            }
+                            Toast.makeText(LoginActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
+                        }
                     }
                 });
     }
@@ -168,36 +143,9 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
-    private void signIn(String email, String password) {
-        Log.d(TAG, "signIn:" + email);
-        if (!validateForm()) {
-            return;
-        }
-
-        showProgressBar();
-
-        mAuth.signInWithEmailAndPassword(email, password)
-                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
-                    @Override
-                    public void onComplete(@NonNull Task<AuthResult> task) {
-                        if (task.isSuccessful()) {
-                            // La connexion a réussi
-                            Log.d(TAG, "signInWithEmail:success");
-                            FirebaseUser user = mAuth.getCurrentUser();
-                            if (user != null && user.isEmailVerified()) {
-                                navigateToMainActivity();
-                            } else {
-                                Toast.makeText(LoginActivity.this, R.string.verify_email_message,
-                                        Toast.LENGTH_SHORT).show();
-                            }
-                        } else {
-                            // Si la connexion échoue, afficher un message à l'utilisateur.
-                            Log.w(TAG, "signInWithEmail:failure", task.getException());
-                            Toast.makeText(LoginActivity.this, R.string.auth_failed,
-                                    Toast.LENGTH_SHORT).show();
-                        }
-                        hideProgressBar();
-                    }
-                });
+    private void navigateToMainActivity() {
+        Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+        startActivity(intent);
+        finish();
     }
 }
