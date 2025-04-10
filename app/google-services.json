@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "642301848107",
+    "project_id": "coshop-a005d",
+    "storage_bucket": "coshop-a005d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:642301848107:android:6aa06995f40adacb08986e",
+        "android_client_info": {
+          "package_name": "com.rhwr.coshop"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2B6mZYTpKYaMIpDHDnhn2eOI1-aI8iv4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
