@@ -12,6 +12,8 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CoShop"
         tools:targetApi="31">
+
+        <!-- Déclaration des activités existantes -->
         <activity
             android:name=".AuthActivity"
             android:exported="false" />
@@ -26,10 +28,13 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".ListActivity"
+            android:exported="true" />
+
     </application>
 
 </manifest>
