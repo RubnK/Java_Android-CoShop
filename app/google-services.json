@@ -12,7 +12,12 @@
           "package_name": "com.rhwr.coshop"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "642301848107-8085vujjuke6iogfg115kfkmak9m6v2r.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyA2B6mZYTpKYaMIpDHDnhn2eOI1-aI8iv4"
@@ -20,7 +25,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "642301848107-8085vujjuke6iogfg115kfkmak9m6v2r.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

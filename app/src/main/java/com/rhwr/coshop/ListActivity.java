@@ -23,10 +23,7 @@ public class ListActivity extends AppCompatActivity {
         database = FirebaseDatabase.getInstance();
         listsRef = database.getReference("lists");
 
-        // Liste des listes (À implémenter avec un adapter pour afficher les données)
+        // Liste des listes
         listView = findViewById(R.id.listView);
-
-        // Vous pouvez utiliser FirebaseRecyclerAdapter ou d'autres méthodes pour peupler la liste
-        // Exemple d'utilisation d'un adapter avec les données récupérées de Firebase
     }
 }
