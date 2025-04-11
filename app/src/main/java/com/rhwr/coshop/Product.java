@@ -1,17 +1,12 @@
 package com.rhwr.coshop;
 
-public class ListItem {
+public class Product {
     private String name;
 
-    // Constructeur sans argument requis pour Firebase
-    public ListItem() {}
-
-    // Constructeur
-    public ListItem(String name) {
+    public Product(String name) {
         this.name = name;
     }
 
-    // Getter et Setter
     public String getName() {
         return name;
     }

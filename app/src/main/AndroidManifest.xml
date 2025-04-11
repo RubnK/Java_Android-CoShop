@@ -41,6 +41,8 @@
             android:name="com.google.firebase.auth.internal.RecaptchaActivity"
             android:exported="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity android:name=".ListDetailActivity" />
+
     </application>
 
 </manifest>
