@@ -1,31 +1,27 @@
 <resources>
+    <!-- Général -->
     <string name="app_name">CoShop</string>
-    <string name="email_hint">Adresse e-mail</string>
-    <string name="password_hint">Mot de passe</string>
-    <string name="sign_in">Se connecter</string>
-    <string name="create_account">S\'inscrire</string>
-    <string name="required">Obligatoire</string>
-    <string name="invalid_email">L\'adresse e-mail n\'est pas valide.</string>
-    <string name="weak_password">Le mot de passe doit contenir au moins 6 caractères.</string>
-    <string name="auth_failed">Échec de l\'authentification.</string>
-    <string name="email_sent">E-mail de vérification envoyé.</string>
-    <string name="verification_failed">Échec de l\'envoi de l\'e-mail de vérification.</string>
-    <string name="welcome_message">Bienvenue sur CoShop</string>
+    <string name="next">Suivant</string>
+    <string name="validate">Valider</string>
+
+    <!-- Auth -->
+    <string name="username_hint">Comment vous appelez-vous ?</string>
+    <string name="username_required">Veuillez entrer un nom</string>
+
+    <string name="phone_hint">Entrez votre numéro de téléphone</string>
+    <string name="send_code">Recevoir le code</string>
+    <string name="invalid_phone">Numéro invalide</string>
+    <string name="sms_failed">Échec de l’envoi du code : %1$s</string>
+
+    <string name="code_hint">Entrez le code reçu par SMS</string>
+    <string name="code_required">Code requis</string>
+    <string name="verify_failed">Échec de la vérification</string>
+    <string name="user_saved">Utilisateur enregistré</string>
+    <string name="user_save_error">Erreur lors de l’enregistrement</string>
+
+    <string name="signed_in_as">Connecté en tant que : %1$s</string>
+    <string name="sign_out">Se déconnecter</string>
     <string name="login">Se connecter</string>
     <string name="register">S\'inscrire</string>
-    <string name="confirm_password_hint">Confirmer le mot de passe</string>
-    <string name="error_passwords_do_not_match">Les mots de passe ne correspondent pas.</string>
-    <string name="registration_success_check_email">Inscription réussie. Veuillez vérifier votre e-mail pour valider votre compte.</string>
-    <string name="error_weak_password">Le mot de passe doit contenir au moins 6 caractères.</string>
-    <string name="error_invalid_email">L\'adresse e-mail n\'est pas valide.</string>
-    <string name="error_email_exists">Cette adresse e-mail est déjà utilisée.</string>
-    <string name="error_network">Erreur de réseau. Veuillez vérifier votre connexion.</string>
-    <string name="error_auth_generic">Erreur d\'authentification</string>
-    <string name="error_invalid_credentials">Adresse e-mail ou mot de passe incorrect.</string>
-    <string name="error_reloading_user">Erreur lors du chargement des informations de l\'utilisateur.</string>
-    <string name="username_hint">Nom d\'utilisateur</string>
-    <string name="phone_number_hint">Numéro de téléphone</string>
-    <string name="invalid_phone_number">Numéro de téléphone invalide.</string>
-    <string name="verify_email_message">Votre adresse e-mail n\'a pas été vérifiée.</string>
-    <string name="sign_out">Se déconnecter</string>
+    <string name="welcome_message">Bienvenue sur CoShop</string>
 </resources>

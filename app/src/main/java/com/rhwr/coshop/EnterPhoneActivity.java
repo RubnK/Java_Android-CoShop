@@ -3,6 +3,7 @@ package com.rhwr.coshop;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -18,38 +19,43 @@ import com.google.firebase.auth.PhoneAuthProvider;
 
 import java.util.concurrent.TimeUnit;
 
-public class LoginActivity extends AppCompatActivity {
+public class EnterPhoneActivity extends AppCompatActivity {
 
-    private EditText loginPhoneEditText;
-    private Button loginSendCodeButton;
+    private EditText phoneEditText;
+    private Button sendCodeButton;
     private FirebaseAuth mAuth;
+
+    private String username;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_login);
+        setContentView(R.layout.activity_enter_phone);
 
-        loginPhoneEditText = findViewById(R.id.loginPhoneEditText);
-        loginSendCodeButton = findViewById(R.id.loginSendCodeButton);
         mAuth = FirebaseAuth.getInstance();
 
-        loginSendCodeButton.setOnClickListener(v -> {
-            String phone = loginPhoneEditText.getText().toString().trim();
+        username = getIntent().getStringExtra("username");
+        phoneEditText = findViewById(R.id.phoneEditText);
+        sendCodeButton = findViewById(R.id.sendCodeButton);
 
-            if (TextUtils.isEmpty(phone) || phone.length() < 10) {
-                loginPhoneEditText.setError("Numéro invalide");
+        sendCodeButton.setOnClickListener(v -> {
+            String phoneNumber = phoneEditText.getText().toString().trim();
+
+            if (TextUtils.isEmpty(phoneNumber) || phoneNumber.length() < 10) {
+                phoneEditText.setError("Numéro invalide");
                 return;
             }
 
-            if (!phone.startsWith("+")) {
-                phone = "+33" + phone.substring(1); // Adapté pour France
-            }
-
-            sendCode(phone);
+            sendVerificationCode(phoneNumber);
         });
     }
 
-    private void sendCode(String phoneNumber) {
+    private void sendVerificationCode(String phoneNumber) {
+
+        if (!phoneNumber.startsWith("+")) {
+            phoneNumber = "+33" + phoneNumber.substring(1);
+        }
+
         PhoneAuthOptions options =
                 PhoneAuthOptions.newBuilder(mAuth)
                         .setPhoneNumber(phoneNumber)
@@ -57,27 +63,30 @@ public class LoginActivity extends AppCompatActivity {
                         .setActivity(this)
                         .setCallbacks(callbacks)
                         .build();
-
         PhoneAuthProvider.verifyPhoneNumber(options);
     }
+
 
     private final PhoneAuthProvider.OnVerificationStateChangedCallbacks callbacks =
             new PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
                 @Override
                 public void onVerificationCompleted(@NonNull PhoneAuthCredential credential) {
-                    // Rien ici pour le moment
+                    // Auto-verification possible (instant)
                 }
 
                 @Override
                 public void onVerificationFailed(@NonNull FirebaseException e) {
-                    Toast.makeText(LoginActivity.this, "Erreur : " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    Toast.makeText(EnterPhoneActivity.this, "Échec : " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    Log.e("PhoneAuth", "VerificationFailed", e);
                 }
 
                 @Override
                 public void onCodeSent(@NonNull String verificationId,
                                        @NonNull PhoneAuthProvider.ForceResendingToken token) {
-                    Intent intent = new Intent(LoginActivity.this, VerifyPhoneActivity.class);
+                    Intent intent = new Intent(EnterPhoneActivity.this, VerifyPhoneActivity.class);
                     intent.putExtra("verificationId", verificationId);
+                    intent.putExtra("username", username);
+                    intent.putExtra("phone", phoneEditText.getText().toString().trim());
                     startActivity(intent);
                 }
             };

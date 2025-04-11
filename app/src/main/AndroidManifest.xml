@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
@@ -13,10 +14,16 @@
         android:theme="@style/Theme.CoShop"
         tools:targetApi="31">
         <activity
+            android:name=".VerifyPhoneActivity"
+            android:exported="false" />
+        <activity
+            android:name=".EnterPhoneActivity"
+            android:exported="false" />
+        <activity
             android:name=".AuthActivity"
             android:exported="false" />
         <activity
-            android:name=".RegisterActivity"
+            android:name=".UsernameActivity"
             android:exported="false" />
         <activity
             android:name=".LoginActivity"
@@ -30,6 +37,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name="com.google.firebase.auth.internal.RecaptchaActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
     </application>
 
 </manifest>
