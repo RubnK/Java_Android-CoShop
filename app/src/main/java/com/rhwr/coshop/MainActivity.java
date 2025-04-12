@@ -99,6 +99,28 @@ public class MainActivity extends AppCompatActivity {
         }).addOnFailureListener(e -> {
             Log.e("MainActivity", "Erreur lors de la récupération des listes", e);
         });
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            String selectedListName = listNames.get(position);
+            // Utilise l'identifiant du document Firestore pour passer à ListDetailActivity
+            Intent intent = new Intent(MainActivity.this, ListDetailActivity.class);
+            intent.putExtra("list_id", selectedListName);  // Passe l'ID de la liste ou le nom
+            startActivity(intent);
+        });
+        listsRef.get().addOnSuccessListener(queryDocumentSnapshots -> {
+            listNames.clear();
+            for (DocumentSnapshot document : queryDocumentSnapshots) {
+                String name = document.getString("name");
+                if (name != null) {
+                    listNames.add(name);
+                }
+            }
+            Log.d("MainActivity", "Liste des noms de liste : " + listNames);
+            adapter.notifyDataSetChanged();
+        }).addOnFailureListener(e -> {
+            Log.e("MainActivity", "Erreur lors de la récupération des listes", e);
+        });
+
+
     }
 
     private void signOut() {

@@ -2,6 +2,7 @@ package com.rhwr.coshop;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.widget.ListView;
 
@@ -14,10 +15,11 @@ public class ListActivity extends AppCompatActivity {
     private FirebaseDatabase database;
     private DatabaseReference listsRef;
 
+    @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_list);
+        setContentView(R.layout.activity_list_detail);
 
         // Initialiser la base de données Firebase
         database = FirebaseDatabase.getInstance();
