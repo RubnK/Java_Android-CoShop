@@ -5,17 +5,20 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
+
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -52,7 +55,39 @@ public class MainActivity extends AppCompatActivity {
 
         // Liste des noms de liste (pour l'affichage dans ListView)
         listNames = new ArrayList<>();
-        adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, listNames);
+
+        // Adapter personnalisé pour afficher les listes avec un bouton de suppression
+        adapter = new ArrayAdapter<String>(this, R.layout.activity_list, listNames) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                if (convertView == null) {
+                    convertView = getLayoutInflater().inflate(R.layout.activity_list, parent, false);
+                }
+
+                TextView listNameTextView = convertView.findViewById(R.id.listNameTextView);
+                Button deleteButton = convertView.findViewById(R.id.deleteButton);
+
+                // Récupérer le nom de la liste et l'afficher
+                String listName = listNames.get(position);
+                listNameTextView.setText(listName);
+
+                // Configurer le bouton de suppression
+                deleteButton.setOnClickListener(v -> {
+                    deleteList(listName);
+                });
+
+                // Gérer le clic sur l'élément pour passer à ListDetailActivity
+                convertView.setOnClickListener(v -> {
+                    String selectedListName = listNames.get(position);
+                    // Utilise l'identifiant du document Firestore pour passer à ListDetailActivity
+                    Intent intent = new Intent(MainActivity.this, ListDetailActivity.class);
+                    intent.putExtra("list_id", selectedListName);  // Passe l'ID de la liste ou le nom
+                    startActivity(intent);
+                });
+
+                return convertView;
+            }
+        };
         listView.setAdapter(adapter);
 
         // Vérifier si l'utilisateur est connecté
@@ -65,24 +100,16 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Définir un listener pour la déconnexion
-        signOutButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                signOut();
-            }
-        });
+        signOutButton.setOnClickListener(v -> signOut());
 
         // Nouveau listener pour créer une liste
-        createListButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String listName = listNameEditText.getText().toString().trim();
-                if (!listName.isEmpty()) {
-                    Log.d("MainActivity", "Tentative de création de la liste : " + listName);
-                    createList(listName);
-                } else {
-                    Log.d("MainActivity", "Nom de la liste vide !");
-                }
+        createListButton.setOnClickListener(v -> {
+            String listName = listNameEditText.getText().toString().trim();
+            if (!listName.isEmpty()) {
+                Log.d("MainActivity", "Tentative de création de la liste : " + listName);
+                createList(listName);
+            } else {
+                Log.d("MainActivity", "Nom de la liste vide !");
             }
         });
 
@@ -95,32 +122,10 @@ public class MainActivity extends AppCompatActivity {
                     listNames.add(name);
                 }
             }
-            adapter.notifyDataSetChanged();  // Mettre à jour l'adapter pour afficher les nouvelles données
-        }).addOnFailureListener(e -> {
-            Log.e("MainActivity", "Erreur lors de la récupération des listes", e);
-        });
-        listView.setOnItemClickListener((parent, view, position, id) -> {
-            String selectedListName = listNames.get(position);
-            // Utilise l'identifiant du document Firestore pour passer à ListDetailActivity
-            Intent intent = new Intent(MainActivity.this, ListDetailActivity.class);
-            intent.putExtra("list_id", selectedListName);  // Passe l'ID de la liste ou le nom
-            startActivity(intent);
-        });
-        listsRef.get().addOnSuccessListener(queryDocumentSnapshots -> {
-            listNames.clear();
-            for (DocumentSnapshot document : queryDocumentSnapshots) {
-                String name = document.getString("name");
-                if (name != null) {
-                    listNames.add(name);
-                }
-            }
-            Log.d("MainActivity", "Liste des noms de liste : " + listNames);
             adapter.notifyDataSetChanged();
         }).addOnFailureListener(e -> {
             Log.e("MainActivity", "Erreur lors de la récupération des listes", e);
         });
-
-
     }
 
     private void signOut() {
@@ -148,6 +153,26 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> {
                     Log.w("MainActivity", "Erreur lors de la création de la liste", e);
+                });
+    }
+
+    private void deleteList(String listName) {
+        // Suppression de la liste dans Firestore
+        listsRef.whereEqualTo("name", listName).get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    for (DocumentSnapshot document : queryDocumentSnapshots) {
+                        document.getReference().delete()
+                                .addOnSuccessListener(aVoid -> {
+                                    listNames.remove(listName);
+                                    adapter.notifyDataSetChanged();
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e("MainActivity", "Erreur lors de la suppression de la liste", e);
+                                });
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("MainActivity", "Erreur lors de la récupération de la liste", e);
                 });
     }
 }
