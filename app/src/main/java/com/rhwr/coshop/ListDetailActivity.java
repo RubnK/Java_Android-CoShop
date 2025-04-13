@@ -95,7 +95,7 @@ public class ListDetailActivity extends AppCompatActivity {
                 .addOnSuccessListener(documentReference -> {
                     Toast.makeText(ListDetailActivity.this, "Produit ajouté", Toast.LENGTH_SHORT).show();
                     productEditText.setText("");
-                    loadProducts();  // Recharge les produits après l'ajout
+                    loadProducts();
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(ListDetailActivity.this, "Erreur lors de l'ajout du produit", Toast.LENGTH_SHORT).show();
