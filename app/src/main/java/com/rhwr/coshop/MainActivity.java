@@ -159,36 +159,94 @@ public class MainActivity extends AppCompatActivity {
         }).addOnFailureListener(e -> {
             Log.e("MainActivity", "Erreur Firestore", e);
         });
+        loadUserLists();
     }
 
     private void createList(String listName) {
-        Map<String, Object> list = new HashMap<>();
-        list.put("name", listName);
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser != null) {
+            String userId = currentUser.getUid();
 
-        listsRef.add(list)
-                .addOnSuccessListener(doc -> {
-                    listNames.add(listName);
-                    adapter.notifyDataSetChanged();
-                })
-                .addOnFailureListener(e ->
-                        Log.e("MainActivity", "Erreur création", e)
-                );
+            Map<String, Object> list = new HashMap<>();
+            list.put("name", listName);
+            list.put("userId", userId);  // Ajout de l'ID utilisateur
+
+            listsRef.add(list)
+                    .addOnSuccessListener(doc -> {
+                        listNames.add(listName);
+                        adapter.notifyDataSetChanged();
+                        listNameEditText.setText("");  // Effacer le champ après création
+                    })
+                    .addOnFailureListener(e ->
+                            Log.e("MainActivity", "Erreur création", e)
+                    );
+        }
     }
 
     private void deleteList(String listName) {
-        listsRef.whereEqualTo("name", listName).get()
-                .addOnSuccessListener(snapshots -> {
-                    for (DocumentSnapshot doc : snapshots) {
-                        doc.getReference().delete();
-                    }
-                    listNames.remove(listName);
-                    adapter.notifyDataSetChanged();
-                })
-                .addOnFailureListener(e ->
-                        Log.e("MainActivity", "Erreur suppression", e)
-                );
-    }
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser != null) {
+            String userId = currentUser.getUid();
 
+            listsRef.whereEqualTo("name", listName)
+                    .whereEqualTo("userId", userId)
+                    .get()
+                    .addOnSuccessListener(snapshots -> {
+                        for (DocumentSnapshot doc : snapshots) {
+                            doc.getReference().delete();
+                        }
+                        listNames.remove(listName);
+                        adapter.notifyDataSetChanged();
+                    })
+                    .addOnFailureListener(e ->
+                            Log.e("MainActivity", "Erreur suppression", e)
+                    );
+        }
+    }
+    private void loadUserLists() {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser != null) {
+            String userId = currentUser.getUid();
+
+            // Récupère uniquement les listes de l'utilisateur actuel
+            listsRef.whereEqualTo("userId", userId).get()
+                    .addOnSuccessListener(queryDocumentSnapshots -> {
+                        listNames.clear();
+                        for (DocumentSnapshot document : queryDocumentSnapshots) {
+                            String name = document.getString("name");
+                            if (name != null) {
+                                listNames.add(name);
+                            }
+                        }
+                        adapter.notifyDataSetChanged();
+                    }).addOnFailureListener(e -> {
+                        Log.e("MainActivity", "Erreur Firestore", e);
+                    });
+        }
+    }
+    private void setupRealtimeUpdates() {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser != null) {
+            String userId = currentUser.getUid();
+
+            listsRef.whereEqualTo("userId", userId)
+                    .addSnapshotListener((snapshots, e) -> {
+                        if (e != null) {
+                            Log.e("MainActivity", "Erreur écoute", e);
+                            return;
+                        }
+
+                        listNames.clear();
+                        for (DocumentSnapshot doc : snapshots) {
+                            String name = doc.getString("name");
+                            if (name != null) {
+                                listNames.add(name);
+                            }
+                        }
+                        adapter.notifyDataSetChanged();
+                    });
+        }
+    }
     private void signOut() {
         mAuth.signOut();
         navigateToAuthActivity();
