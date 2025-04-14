@@ -1,23 +1,28 @@
 package com.rhwr.coshop;
 
-import androidx.appcompat.app.AppCompatActivity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,14 +32,20 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView userEmailTextView;
     private EditText listNameEditText;
-    private Button createListButton;
-    private Button signOutButton;
     private ListView listView;
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private CollectionReference listsRef;
     private ArrayList<String> listNames;
     private ArrayAdapter<String> adapter;
+    private MaterialToolbar toolbar;
+    private BottomNavigationView bottomNavigationView;
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.app_barre_menu, menu);
+        return true;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,21 +53,19 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         // Initialisation des vues
+        toolbar = findViewById(R.id.toolBar);
         userEmailTextView = findViewById(R.id.userEmailTextView);
         listNameEditText = findViewById(R.id.listNameEditText);
-        createListButton = findViewById(R.id.createListButton);
-        signOutButton = findViewById(R.id.signOutButton);
         listView = findViewById(R.id.listView);
+        bottomNavigationView = findViewById(R.id.bottomNavigationView);
 
-        // Initialisation de Firebase
+        // Firebase init
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
         listsRef = db.collection("lists");
 
-        // Liste des noms de liste (pour l'affichage dans ListView)
         listNames = new ArrayList<>();
 
-        // Adapter personnalisé pour afficher les listes avec un bouton de suppression
         adapter = new ArrayAdapter<String>(this, R.layout.activity_list, listNames) {
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
@@ -65,23 +74,15 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 TextView listNameTextView = convertView.findViewById(R.id.listNameTextView);
-                Button deleteButton = convertView.findViewById(R.id.deleteButton);
+                listNameTextView.setText(listNames.get(position));
 
-                // Récupérer le nom de la liste et l'afficher
-                String listName = listNames.get(position);
-                listNameTextView.setText(listName);
-
-                // Configurer le bouton de suppression
-                deleteButton.setOnClickListener(v -> {
-                    deleteList(listName);
+                convertView.findViewById(R.id.deleteButton).setOnClickListener(v -> {
+                    deleteList(listNames.get(position));
                 });
 
-                // Gérer le clic sur l'élément pour passer à ListDetailActivity
                 convertView.setOnClickListener(v -> {
-                    String selectedListName = listNames.get(position);
-                    // Utilise l'identifiant du document Firestore pour passer à ListDetailActivity
                     Intent intent = new Intent(MainActivity.this, ListDetailActivity.class);
-                    intent.putExtra("list_id", selectedListName);  // Passe l'ID de la liste ou le nom
+                    intent.putExtra("list_id", listNames.get(position));
                     startActivity(intent);
                 });
 
@@ -90,30 +91,62 @@ public class MainActivity extends AppCompatActivity {
         };
         listView.setAdapter(adapter);
 
-        // Vérifier si l'utilisateur est connecté
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-        if (currentUser != null) {
-            userEmailTextView.setText("Connecté en tant que : " + currentUser.getEmail());
-        } else {
-            navigateToAuthActivity();
-            finish();
-        }
+        // Toolbar
+        toolbar.setNavigationOnClickListener(view ->
+                Toast.makeText(MainActivity.this, "Menu navigation cliqué", Toast.LENGTH_SHORT).show()
+        );
 
-        // Définir un listener pour la déconnexion
-        signOutButton.setOnClickListener(v -> signOut());
-
-        // Nouveau listener pour créer une liste
-        createListButton.setOnClickListener(v -> {
-            String listName = listNameEditText.getText().toString().trim();
-            if (!listName.isEmpty()) {
-                Log.d("MainActivity", "Tentative de création de la liste : " + listName);
-                createList(listName);
-            } else {
-                Log.d("MainActivity", "Nom de la liste vide !");
+        toolbar.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.menu_fav) {
+                Toast.makeText(MainActivity.this, "Voir les favoris", Toast.LENGTH_SHORT).show();
+                return true;
+            } else if (id == R.id.menu_notif) {
+                Toast.makeText(MainActivity.this, "Voir les notifications", Toast.LENGTH_SHORT).show();
+                return true;
+            } else if (id == R.id.menu_search) {
+                Toast.makeText(MainActivity.this, "Recherche", Toast.LENGTH_SHORT).show();
+                return true;
             }
+            return false;
         });
 
-        // Écouter les changements dans Firestore pour afficher les listes
+        // Bottom navigation
+        bottomNavigationView.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_add) {
+                String listName = listNameEditText.getText().toString().trim();
+                if (!listName.isEmpty()) {
+                    createList(listName);
+                } else {
+                    Toast.makeText(this, "Entrez un nom de liste", Toast.LENGTH_SHORT).show();
+                }
+                return true;
+            } else if (id == R.id.nav_home) {
+                Toast.makeText(this, "Accueil", Toast.LENGTH_SHORT).show();
+                return true;
+            } else if (id == R.id.nav_archive) {
+                Toast.makeText(this, "Archives", Toast.LENGTH_SHORT).show();
+                return true;
+            } else if (id == R.id.nav_profil) {
+                Toast.makeText(this, "Profil", Toast.LENGTH_SHORT).show();
+                return true;
+            } else if (id == R.id.nav_paramettre) {
+                signOut();
+                return true;
+            }
+            return false;
+        });
+
+        // Vérifie si l'utilisateur est connecté
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser != null) {
+            userEmailTextView.setText("Connecté : " + currentUser.getEmail());
+        } else {
+            navigateToAuthActivity();
+        }
+
+        // Charger les listes existantes
         listsRef.get().addOnSuccessListener(queryDocumentSnapshots -> {
             listNames.clear();
             for (DocumentSnapshot document : queryDocumentSnapshots) {
@@ -124,55 +157,46 @@ public class MainActivity extends AppCompatActivity {
             }
             adapter.notifyDataSetChanged();
         }).addOnFailureListener(e -> {
-            Log.e("MainActivity", "Erreur lors de la récupération des listes", e);
+            Log.e("MainActivity", "Erreur Firestore", e);
         });
+    }
+
+    private void createList(String listName) {
+        Map<String, Object> list = new HashMap<>();
+        list.put("name", listName);
+
+        listsRef.add(list)
+                .addOnSuccessListener(doc -> {
+                    listNames.add(listName);
+                    adapter.notifyDataSetChanged();
+                })
+                .addOnFailureListener(e ->
+                        Log.e("MainActivity", "Erreur création", e)
+                );
+    }
+
+    private void deleteList(String listName) {
+        listsRef.whereEqualTo("name", listName).get()
+                .addOnSuccessListener(snapshots -> {
+                    for (DocumentSnapshot doc : snapshots) {
+                        doc.getReference().delete();
+                    }
+                    listNames.remove(listName);
+                    adapter.notifyDataSetChanged();
+                })
+                .addOnFailureListener(e ->
+                        Log.e("MainActivity", "Erreur suppression", e)
+                );
     }
 
     private void signOut() {
         mAuth.signOut();
         navigateToAuthActivity();
-        finish();
     }
 
     private void navigateToAuthActivity() {
         Intent intent = new Intent(MainActivity.this, AuthActivity.class);
         startActivity(intent);
         finish();
-    }
-
-    private void createList(String listName) {
-        // Créer une nouvelle liste dans Firestore
-        Map<String, Object> list = new HashMap<>();
-        list.put("name", listName);
-
-        listsRef.add(list)
-                .addOnSuccessListener(documentReference -> {
-                    Log.d("MainActivity", "Liste créée avec succès : " + documentReference.getId());
-                    listNames.add(listName);
-                    adapter.notifyDataSetChanged();
-                })
-                .addOnFailureListener(e -> {
-                    Log.w("MainActivity", "Erreur lors de la création de la liste", e);
-                });
-    }
-
-    private void deleteList(String listName) {
-        // Suppression de la liste dans Firestore
-        listsRef.whereEqualTo("name", listName).get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    for (DocumentSnapshot document : queryDocumentSnapshots) {
-                        document.getReference().delete()
-                                .addOnSuccessListener(aVoid -> {
-                                    listNames.remove(listName);
-                                    adapter.notifyDataSetChanged();
-                                })
-                                .addOnFailureListener(e -> {
-                                    Log.e("MainActivity", "Erreur lors de la suppression de la liste", e);
-                                });
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Log.e("MainActivity", "Erreur lors de la récupération de la liste", e);
-                });
     }
 }
