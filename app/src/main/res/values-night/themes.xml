@@ -2,6 +2,8 @@
     <!-- Base application theme. -->
     <style name="Base.Theme.CoShop" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <item name="colorPrimary">@color/bleuL</item> <!-- Utiliser une couleur plus claire pour le thème sombre -->
+        <item name="colorPrimaryDark">@color/bleuD</item>
+        <item name="colorAccent">@color/bleuL</item>
     </style>
 </resources>
