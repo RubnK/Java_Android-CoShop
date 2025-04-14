@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/sort_alphabetical"
+        android:title="Trier par nom"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/sort_by_category"
+        android:title="Trier par catégorie"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/sort_by_purchased"
+        android:title="Non achetés d'abord"
+        app:showAsAction="never" />
+</menu>
