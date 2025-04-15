@@ -145,20 +145,6 @@ public class MainActivity extends AppCompatActivity {
         } else {
             navigateToAuthActivity();
         }
-
-        // Charger les listes existantes
-        listsRef.get().addOnSuccessListener(queryDocumentSnapshots -> {
-            listNames.clear();
-            for (DocumentSnapshot document : queryDocumentSnapshots) {
-                String name = document.getString("name");
-                if (name != null) {
-                    listNames.add(name);
-                }
-            }
-            adapter.notifyDataSetChanged();
-        }).addOnFailureListener(e -> {
-            Log.e("MainActivity", "Erreur Firestore", e);
-        });
         loadUserLists();
     }
 
