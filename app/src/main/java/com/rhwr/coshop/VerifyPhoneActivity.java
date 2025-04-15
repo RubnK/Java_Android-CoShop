@@ -3,15 +3,10 @@ package com.rhwr.coshop;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
-
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.google.firebase.FirebaseException;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.PhoneAuthCredential;
@@ -20,8 +15,6 @@ import com.google.firebase.auth.UserProfileChangeRequest;
 
 public class VerifyPhoneActivity extends AppCompatActivity {
 
-    private EditText codeEditText;
-    private Button verifyButton;
     private FirebaseAuth mAuth;
 
     private String verificationId;
@@ -33,9 +26,8 @@ public class VerifyPhoneActivity extends AppCompatActivity {
         setContentView(R.layout.activity_verify_phone);
 
         mAuth = FirebaseAuth.getInstance();
-
-        codeEditText = findViewById(R.id.codeEditText);
-        verifyButton = findViewById(R.id.verifyButton);
+        EditText codeEditText = findViewById(R.id.codeEditText);
+        Button verifyButton = findViewById(R.id.verifyButton);
 
         verificationId = getIntent().getStringExtra("verificationId");
         username = getIntent().getStringExtra("username");
@@ -55,34 +47,29 @@ public class VerifyPhoneActivity extends AppCompatActivity {
     private void verifyCode(String code) {
         if (verificationId != null) {
             PhoneAuthCredential credential = PhoneAuthProvider.getCredential(verificationId, code);
-            signInWithCredential(credential);
+            linkPhoneWithEmail(credential);
         }
     }
 
-    private void signInWithCredential(PhoneAuthCredential credential) {
-        mAuth.signInWithCredential(credential)
-                .addOnCompleteListener(this, task -> {
-                    if (task.isSuccessful()) {
-                        FirebaseUser user = mAuth.getCurrentUser();
-                        if (user != null && username != null) {
-                            UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
-                                    .setDisplayName(username).build();
-
-                            user.updateProfile(profileUpdates)
-                                    .addOnCompleteListener(updateTask -> {
-                                        if (updateTask.isSuccessful()) {
-                                            Log.d("Firebase", "Nom d'utilisateur mis à jour");
-                                        }
-                                        goToMain();
-                                    });
+    private void linkPhoneWithEmail(PhoneAuthCredential credential) {
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user != null) {
+            user.linkWithCredential(credential)
+                    .addOnCompleteListener(this, task -> {
+                        if (task.isSuccessful()) {
+                            if (username != null) {
+                                UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
+                                        .setDisplayName(username)
+                                        .build();
+                                user.updateProfile(profileUpdates).addOnCompleteListener(updateTask -> goToMain());
+                            } else {
+                                goToMain();
+                            }
                         } else {
-                            goToMain();
+                            Toast.makeText(this, "Erreur de liaison : " + task.getException(), Toast.LENGTH_SHORT).show();
                         }
-                    } else {
-                        Toast.makeText(this, "Échec de la vérification", Toast.LENGTH_LONG).show();
-                        Log.e("FirebaseAuth", "SignIn failed", task.getException());
-                    }
-                });
+                    });
+        }
     }
 
     private void goToMain() {

@@ -5,23 +5,17 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
-
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.google.firebase.FirebaseException;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.PhoneAuthCredential;
-import com.google.firebase.auth.PhoneAuthOptions;
-import com.google.firebase.auth.PhoneAuthProvider;
-
-import java.util.concurrent.TimeUnit;
+import com.google.firebase.auth.FirebaseUser;
 
 public class LoginActivity extends AppCompatActivity {
 
-    private EditText loginPhoneEditText;
-    private Button loginSendCodeButton;
+    private EditText emailEditText, passwordEditText;
+    private Button loginButton;
+    private TextView forgotPasswordTextView;
     private FirebaseAuth mAuth;
 
     @Override
@@ -29,56 +23,52 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        loginPhoneEditText = findViewById(R.id.loginPhoneEditText);
-        loginSendCodeButton = findViewById(R.id.loginSendCodeButton);
+        emailEditText = findViewById(R.id.emailEditText);
+        passwordEditText = findViewById(R.id.passwordEditText);
+        loginButton = findViewById(R.id.loginButton);
+        forgotPasswordTextView = findViewById(R.id.forgotPasswordTextView);
+
         mAuth = FirebaseAuth.getInstance();
 
-        loginSendCodeButton.setOnClickListener(v -> {
-            String phone = loginPhoneEditText.getText().toString().trim();
+        loginButton.setOnClickListener(v -> {
+            String email = emailEditText.getText().toString().trim();
+            String password = passwordEditText.getText().toString().trim();
 
-            if (TextUtils.isEmpty(phone) || phone.length() < 10) {
-                loginPhoneEditText.setError("Numéro invalide");
+            if (TextUtils.isEmpty(email) || TextUtils.isEmpty(password)) {
+                Toast.makeText(this, "Veuillez remplir tous les champs", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            if (!phone.startsWith("+")) {
-                phone = "+33" + phone.substring(1); // Adapté pour France
+            mAuth.signInWithEmailAndPassword(email, password)
+                    .addOnSuccessListener(authResult -> {
+                        FirebaseUser user = mAuth.getCurrentUser();
+                        if (user != null && user.isEmailVerified()) {
+                            Intent intent = new Intent(this, MainActivity.class);
+                            startActivity(intent);
+                            finish();
+                        } else {
+                            Toast.makeText(this, "Veuillez vérifier votre adresse e-mail", Toast.LENGTH_LONG).show();
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(this, "Erreur : " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
+        });
+
+        forgotPasswordTextView.setOnClickListener(v -> {
+            String email = emailEditText.getText().toString().trim();
+            if (TextUtils.isEmpty(email)) {
+                Toast.makeText(this, "Veuillez entrer votre e-mail pour réinitialiser", Toast.LENGTH_SHORT).show();
+                return;
             }
 
-            sendCode(phone);
+            mAuth.sendPasswordResetEmail(email)
+                    .addOnSuccessListener(unused ->
+                            Toast.makeText(this, "Un e-mail de réinitialisation a été envoyé", Toast.LENGTH_LONG).show()
+                    )
+                    .addOnFailureListener(e ->
+                            Toast.makeText(this, "Erreur : " + e.getMessage(), Toast.LENGTH_SHORT).show()
+                    );
         });
     }
-
-    private void sendCode(String phoneNumber) {
-        PhoneAuthOptions options =
-                PhoneAuthOptions.newBuilder(mAuth)
-                        .setPhoneNumber(phoneNumber)
-                        .setTimeout(60L, TimeUnit.SECONDS)
-                        .setActivity(this)
-                        .setCallbacks(callbacks)
-                        .build();
-
-        PhoneAuthProvider.verifyPhoneNumber(options);
-    }
-
-    private final PhoneAuthProvider.OnVerificationStateChangedCallbacks callbacks =
-            new PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
-                @Override
-                public void onVerificationCompleted(@NonNull PhoneAuthCredential credential) {
-                    // Rien ici pour le moment
-                }
-
-                @Override
-                public void onVerificationFailed(@NonNull FirebaseException e) {
-                    Toast.makeText(LoginActivity.this, "Erreur : " + e.getMessage(), Toast.LENGTH_LONG).show();
-                }
-
-                @Override
-                public void onCodeSent(@NonNull String verificationId,
-                                       @NonNull PhoneAuthProvider.ForceResendingToken token) {
-                    Intent intent = new Intent(LoginActivity.this, VerifyPhoneActivity.class);
-                    intent.putExtra("verificationId", verificationId);
-                    startActivity(intent);
-                }
-            };
 }

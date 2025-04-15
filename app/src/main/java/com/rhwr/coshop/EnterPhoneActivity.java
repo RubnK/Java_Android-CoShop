@@ -3,20 +3,15 @@ package com.rhwr.coshop;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
-
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-
 import com.google.firebase.FirebaseException;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.PhoneAuthCredential;
 import com.google.firebase.auth.PhoneAuthOptions;
 import com.google.firebase.auth.PhoneAuthProvider;
-
 import java.util.concurrent.TimeUnit;
 
 public class EnterPhoneActivity extends AppCompatActivity {
@@ -46,16 +41,15 @@ public class EnterPhoneActivity extends AppCompatActivity {
                 return;
             }
 
+            if (!phoneNumber.startsWith("+")) {
+                phoneNumber = "+33" + phoneNumber.substring(1);
+            }
+
             sendVerificationCode(phoneNumber);
         });
     }
 
     private void sendVerificationCode(String phoneNumber) {
-
-        if (!phoneNumber.startsWith("+")) {
-            phoneNumber = "+33" + phoneNumber.substring(1);
-        }
-
         PhoneAuthOptions options =
                 PhoneAuthOptions.newBuilder(mAuth)
                         .setPhoneNumber(phoneNumber)
@@ -66,23 +60,18 @@ public class EnterPhoneActivity extends AppCompatActivity {
         PhoneAuthProvider.verifyPhoneNumber(options);
     }
 
-
     private final PhoneAuthProvider.OnVerificationStateChangedCallbacks callbacks =
             new PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
                 @Override
-                public void onVerificationCompleted(@NonNull PhoneAuthCredential credential) {
-                    // Auto-verification possible (instant)
+                public void onVerificationCompleted(PhoneAuthCredential credential) {}
+
+                @Override
+                public void onVerificationFailed(FirebaseException e) {
+                    Toast.makeText(EnterPhoneActivity.this, "Erreur : " + e.getMessage(), Toast.LENGTH_LONG).show();
                 }
 
                 @Override
-                public void onVerificationFailed(@NonNull FirebaseException e) {
-                    Toast.makeText(EnterPhoneActivity.this, "Échec : " + e.getMessage(), Toast.LENGTH_LONG).show();
-                    Log.e("PhoneAuth", "VerificationFailed", e);
-                }
-
-                @Override
-                public void onCodeSent(@NonNull String verificationId,
-                                       @NonNull PhoneAuthProvider.ForceResendingToken token) {
+                public void onCodeSent(String verificationId, PhoneAuthProvider.ForceResendingToken token) {
                     Intent intent = new Intent(EnterPhoneActivity.this, VerifyPhoneActivity.class);
                     intent.putExtra("verificationId", verificationId);
                     intent.putExtra("username", username);
@@ -90,4 +79,4 @@ public class EnterPhoneActivity extends AppCompatActivity {
                     startActivity(intent);
                 }
             };
-}
+    }
