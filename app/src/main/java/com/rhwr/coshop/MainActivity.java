@@ -15,6 +15,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.appcompat.widget.SearchView;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -40,12 +41,8 @@ public class MainActivity extends AppCompatActivity {
     private ArrayAdapter<String> adapter;
     private MaterialToolbar toolbar;
     private BottomNavigationView bottomNavigationView;
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.app_barre_menu, menu);
-        return true;
-    }
+    private SearchView searchView;
+    private ArrayList<String> allListNames;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Initialisation des vues
         toolbar = findViewById(R.id.toolBar);
+        searchView = findViewById(R.id.searchView);
         userEmailTextView = findViewById(R.id.userEmailTextView);
         listNameEditText = findViewById(R.id.listNameEditText);
         listView = findViewById(R.id.listView);
@@ -65,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
         listsRef = db.collection("lists");
 
         listNames = new ArrayList<>();
-
+        allListNames = new ArrayList<>(); // Initialisation de la liste complète
         adapter = new ArrayAdapter<String>(this, R.layout.activity_list, listNames) {
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
@@ -160,6 +158,48 @@ public class MainActivity extends AppCompatActivity {
             Log.e("MainActivity", "Erreur Firestore", e);
         });
         loadUserLists();
+        setupSearchView();
+    }
+
+
+    private void setupSearchView() {
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                filterLists(query);
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                filterLists(newText);
+                return true;
+            }
+        });
+    }
+
+    private void filterLists(String text) {
+        if (text.isEmpty()) {
+            // Si le texte est vide, afficher toutes les listes
+            listNames.clear();
+            listNames.addAll(allListNames);
+        } else {
+            // Filtrer les listes selon le texte de recherche
+            listNames.clear();
+            text = text.toLowerCase();
+            for (String listName : allListNames) {
+                if (listName.toLowerCase().contains(text)) {
+                    listNames.add(listName);
+                }
+            }
+        }
+        adapter.notifyDataSetChanged();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.app_barre_menu, menu);
+        return true;
     }
 
     private void createList(String listName) {
@@ -212,10 +252,12 @@ public class MainActivity extends AppCompatActivity {
             listsRef.whereEqualTo("userId", userId).get()
                     .addOnSuccessListener(queryDocumentSnapshots -> {
                         listNames.clear();
+                        allListNames.clear(); // Vider la liste complète
                         for (DocumentSnapshot document : queryDocumentSnapshots) {
                             String name = document.getString("name");
                             if (name != null) {
                                 listNames.add(name);
+                                allListNames.add(name); // Ajouter à la liste complète
                             }
                         }
                         adapter.notifyDataSetChanged();
@@ -237,10 +279,12 @@ public class MainActivity extends AppCompatActivity {
                         }
 
                         listNames.clear();
+                        allListNames.clear(); // Vider la liste complète
                         for (DocumentSnapshot doc : snapshots) {
                             String name = doc.getString("name");
                             if (name != null) {
                                 listNames.add(name);
+                                allListNames.add(name); // Ajouter à la liste complète
                             }
                         }
                         adapter.notifyDataSetChanged();
