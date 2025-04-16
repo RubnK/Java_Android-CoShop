@@ -11,4 +11,9 @@
         android:id="@+id/sort_by_category"
         android:title="Trier par catégorie"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/manage_list"
+        android:title="Gérer la liste"
+        android:icon="@android:drawable/ic_menu_manage"
+        app:showAsAction="always" />
 </menu>
