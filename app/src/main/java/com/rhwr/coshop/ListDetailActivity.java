@@ -11,13 +11,14 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.Toast;
+import android.content.Intent;
+
 
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 
 public class ListDetailActivity extends AppCompatActivity {
     private EditText productEditText;
@@ -137,6 +138,10 @@ public class ListDetailActivity extends AppCompatActivity {
             currentSortMode = SortMode.CATEGORY;
             sortProductList();
             return true;
+        } else if (id == R.id.manage_list){
+            Intent intent = new Intent(this, ManageListActivity.class);
+            intent.putExtra("list_id", listId);
+            startActivity(intent);
         } else if (id == android.R.id.home) {
             finish();
             return true;

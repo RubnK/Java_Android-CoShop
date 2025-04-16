@@ -6,17 +6,22 @@ import android.text.TextUtils;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.PhoneAuthCredential;
 import com.google.firebase.auth.PhoneAuthProvider;
 import com.google.firebase.auth.UserProfileChangeRequest;
+import com.google.firebase.firestore.FirebaseFirestore;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class VerifyPhoneActivity extends AppCompatActivity {
 
     private FirebaseAuth mAuth;
-
     private String verificationId;
     private String username;
 
@@ -61,8 +66,13 @@ public class VerifyPhoneActivity extends AppCompatActivity {
                                 UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
                                         .setDisplayName(username)
                                         .build();
-                                user.updateProfile(profileUpdates).addOnCompleteListener(updateTask -> goToMain());
+
+                                user.updateProfile(profileUpdates).addOnCompleteListener(updateTask -> {
+                                    saveUserToFirestore(user);
+                                    goToMain();
+                                });
                             } else {
+                                saveUserToFirestore(user);
                                 goToMain();
                             }
                         } else {
@@ -70,6 +80,24 @@ public class VerifyPhoneActivity extends AppCompatActivity {
                         }
                     });
         }
+    }
+
+    private void saveUserToFirestore(FirebaseUser user) {
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("username", user.getDisplayName());
+        userData.put("email", user.getEmail());
+        userData.put("phoneNumber", user.getPhoneNumber());
+
+        FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(user.getUid())
+                .set(userData)
+                .addOnSuccessListener(aVoid -> {
+                    // Log ou toast si besoin
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Erreur enregistrement Firestore", Toast.LENGTH_SHORT).show();
+                });
     }
 
     private void goToMain() {

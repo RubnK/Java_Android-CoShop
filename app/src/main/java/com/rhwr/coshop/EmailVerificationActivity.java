@@ -14,6 +14,7 @@ public class EmailVerificationActivity extends AppCompatActivity {
     private TextView infoTextView;
     private Button checkButton;
     private FirebaseAuth mAuth;
+    private String username;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,6 +24,7 @@ public class EmailVerificationActivity extends AppCompatActivity {
         infoTextView = findViewById(R.id.infoTextView);
         checkButton = findViewById(R.id.checkButton);
         mAuth = FirebaseAuth.getInstance();
+        username = getIntent().getStringExtra("username");
 
         checkButton.setOnClickListener(v -> {
             FirebaseUser user = mAuth.getCurrentUser();
@@ -31,6 +33,7 @@ public class EmailVerificationActivity extends AppCompatActivity {
                     if (user.isEmailVerified()) {
                         Intent intent = new Intent(this, EnterPhoneActivity.class);
                         intent.putExtra("email", user.getEmail());
+                        intent.putExtra("username", username);
                         startActivity(intent);
                         finish();
                     } else {

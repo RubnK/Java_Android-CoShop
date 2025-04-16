@@ -4,7 +4,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
@@ -25,7 +24,6 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
@@ -36,6 +34,7 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private CollectionReference listsRef;
+    private ArrayList<String> listIds;
     private ArrayList<String> listNames;
     private ArrayAdapter<String> adapter;
     private MaterialToolbar toolbar;
@@ -52,18 +51,17 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Initialisation des vues
         toolbar = findViewById(R.id.toolBar);
         userEmailTextView = findViewById(R.id.userEmailTextView);
         listNameEditText = findViewById(R.id.listNameEditText);
         listView = findViewById(R.id.listView);
         bottomNavigationView = findViewById(R.id.bottomNavigationView);
 
-        // Firebase init
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
         listsRef = db.collection("lists");
 
+        listIds = new ArrayList<>();
         listNames = new ArrayList<>();
 
         adapter = new ArrayAdapter<String>(this, R.layout.activity_list, listNames) {
@@ -77,12 +75,12 @@ public class MainActivity extends AppCompatActivity {
                 listNameTextView.setText(listNames.get(position));
 
                 convertView.findViewById(R.id.deleteButton).setOnClickListener(v -> {
-                    deleteList(listNames.get(position));
+                    deleteList(listIds.get(position));
                 });
 
                 convertView.setOnClickListener(v -> {
                     Intent intent = new Intent(MainActivity.this, ListDetailActivity.class);
-                    intent.putExtra("list_id", listNames.get(position));
+                    intent.putExtra("list_id", listIds.get(position));
                     startActivity(intent);
                 });
 
@@ -91,7 +89,6 @@ public class MainActivity extends AppCompatActivity {
         };
         listView.setAdapter(adapter);
 
-        // Toolbar
         toolbar.setNavigationOnClickListener(view ->
                 Toast.makeText(MainActivity.this, "Menu navigation cliqué", Toast.LENGTH_SHORT).show()
         );
@@ -111,16 +108,11 @@ public class MainActivity extends AppCompatActivity {
             return false;
         });
 
-        // Bottom navigation
         bottomNavigationView.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
             if (id == R.id.nav_add) {
-                String listName = listNameEditText.getText().toString().trim();
-                if (!listName.isEmpty()) {
-                    createList(listName);
-                } else {
-                    Toast.makeText(this, "Entrez un nom de liste", Toast.LENGTH_SHORT).show();
-                }
+                CreateListDialogFragment dialog = new CreateListDialogFragment();
+                dialog.show(getSupportFragmentManager(), "CreateListDialog");
                 return true;
             } else if (id == R.id.nav_home) {
                 Toast.makeText(this, "Accueil", Toast.LENGTH_SHORT).show();
@@ -138,101 +130,57 @@ public class MainActivity extends AppCompatActivity {
             return false;
         });
 
-        // Vérifie si l'utilisateur est connecté
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
             userEmailTextView.setText("Connecté : " + currentUser.getEmail());
         } else {
             navigateToAuthActivity();
         }
-        loadUserLists();
+
+        setupRealtimeUpdates();
     }
 
-    private void createList(String listName) {
+    private void deleteList(String listId) {
         FirebaseUser currentUser = mAuth.getCurrentUser();
-        if (currentUser != null) {
-            String userId = currentUser.getUid();
+        if (currentUser == null) return;
 
-            Map<String, Object> list = new HashMap<>();
-            list.put("name", listName);
-            list.put("userId", userId);  // Ajout de l'ID utilisateur
-
-            listsRef.add(list)
-                    .addOnSuccessListener(doc -> {
-                        listNames.add(listName);
-                        adapter.notifyDataSetChanged();
-                        listNameEditText.setText("");  // Effacer le champ après création
-                    })
-                    .addOnFailureListener(e ->
-                            Log.e("MainActivity", "Erreur création", e)
-                    );
-        }
+        listsRef.document(listId).get().addOnSuccessListener(doc -> {
+            Map<String, Object> members = (Map<String, Object>) doc.get("members");
+            if (members != null && "admin".equals(members.get(currentUser.getUid()))) {
+                listsRef.document(listId).delete().addOnSuccessListener(unused -> {
+                    Toast.makeText(this, "Liste supprimée", Toast.LENGTH_SHORT).show();
+                });
+            } else {
+                Toast.makeText(this, "Vous n'êtes pas admin de cette liste", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
-    private void deleteList(String listName) {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-        if (currentUser != null) {
-            String userId = currentUser.getUid();
-
-            listsRef.whereEqualTo("name", listName)
-                    .whereEqualTo("userId", userId)
-                    .get()
-                    .addOnSuccessListener(snapshots -> {
-                        for (DocumentSnapshot doc : snapshots) {
-                            doc.getReference().delete();
-                        }
-                        listNames.remove(listName);
-                        adapter.notifyDataSetChanged();
-                    })
-                    .addOnFailureListener(e ->
-                            Log.e("MainActivity", "Erreur suppression", e)
-                    );
-        }
-    }
-    private void loadUserLists() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-        if (currentUser != null) {
-            String userId = currentUser.getUid();
-
-            // Récupère uniquement les listes de l'utilisateur actuel
-            listsRef.whereEqualTo("userId", userId).get()
-                    .addOnSuccessListener(queryDocumentSnapshots -> {
-                        listNames.clear();
-                        for (DocumentSnapshot document : queryDocumentSnapshots) {
-                            String name = document.getString("name");
-                            if (name != null) {
-                                listNames.add(name);
-                            }
-                        }
-                        adapter.notifyDataSetChanged();
-                    }).addOnFailureListener(e -> {
-                        Log.e("MainActivity", "Erreur Firestore", e);
-                    });
-        }
-    }
     private void setupRealtimeUpdates() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
-        if (currentUser != null) {
-            String userId = currentUser.getUid();
+        if (currentUser == null) return;
 
-            listsRef.whereEqualTo("userId", userId)
-                    .addSnapshotListener((snapshots, e) -> {
-                        if (e != null) {
-                            Log.e("MainActivity", "Erreur écoute", e);
-                            return;
-                        }
+        listsRef.addSnapshotListener((snapshots, e) -> {
+            if (e != null) {
+                Log.e("MainActivity", "Erreur Firestore : ", e);
+                return;
+            }
 
-                        listNames.clear();
-                        for (DocumentSnapshot doc : snapshots) {
-                            String name = doc.getString("name");
-                            if (name != null) {
-                                listNames.add(name);
-                            }
-                        }
-                        adapter.notifyDataSetChanged();
-                    });
-        }
+            listIds.clear();
+            listNames.clear();
+
+            for (DocumentSnapshot doc : snapshots) {
+                Map<String, Object> members = (Map<String, Object>) doc.get("members");
+                if (members != null && members.containsKey(currentUser.getUid())) {
+                    listIds.add(doc.getId());
+                    listNames.add(doc.getString("name"));
+                }
+            }
+
+            adapter.notifyDataSetChanged();
+        });
     }
+
     private void signOut() {
         mAuth.signOut();
         navigateToAuthActivity();
