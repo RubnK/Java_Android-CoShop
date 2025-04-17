@@ -13,7 +13,6 @@ import android.widget.Spinner;
 import android.widget.Toast;
 import android.content.Intent;
 
-
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -30,13 +29,12 @@ public class ListDetailActivity extends AppCompatActivity {
     private ProductAdapter adapter;
 
     private String listId;
+    private boolean isReadOnly = false;
     private FirebaseFirestore db;
 
-    // Mode de tri actuel
-    private enum SortMode { NONE, ALPHABETICAL, CATEGORY };
+    private enum SortMode { NONE, ALPHABETICAL, CATEGORY }
     private SortMode currentSortMode = SortMode.NONE;
 
-    // Catégories pour les produits
     private final String[] CATEGORIES = new String[]{
             "Fruits et légumes",
             "Produits laitiers",
@@ -55,68 +53,74 @@ public class ListDetailActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_list_detail);
 
-        // Initialiser FirebaseFirestore
         db = FirebaseFirestore.getInstance();
 
-        // Récupérer l'ID de la liste passé via l'Intent
         listId = getIntent().getStringExtra("list_id");
 
         if (listId == null) {
-            // Gérer l'erreur si l'ID est null
             Log.e("ListDetailActivity", "Liste ID est null");
             finish();
             return;
         }
 
-        // Initialiser les vues
         productEditText = findViewById(R.id.productEditText);
         quantityEditText = findViewById(R.id.quantityEditText);
         categorySpinner = findViewById(R.id.categorySpinner);
         addProductButton = findViewById(R.id.addProductButton);
         productListView = findViewById(R.id.productListView);
 
-        // Configuration du spinner des catégories
         ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(
                 this, android.R.layout.simple_spinner_dropdown_item, CATEGORIES);
         categorySpinner.setAdapter(spinnerAdapter);
 
-        // Initialiser la liste des produits
         productList = new ArrayList<>();
-        adapter = new ProductAdapter(this, productList, listId);
+        adapter = new ProductAdapter(this, productList, listId, isReadOnly);
         productListView.setAdapter(adapter);
 
-        // Activer les options de menu
         setSupportActionBar(findViewById(R.id.toolbar));
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportActionBar().setTitle("Détails de la liste");
         }
 
-        // Charger les produits
-        loadProducts();
+        checkIfArchivedAndInitialize();
+    }
 
-        // Ajouter un produit
-        addProductButton.setOnClickListener(v -> {
-            String productName = productEditText.getText().toString().trim();
-            String quantityStr = quantityEditText.getText().toString().trim();
+    private void checkIfArchivedAndInitialize() {
+        db.collection("lists").document(listId).get().addOnSuccessListener(doc -> {
+            Boolean archived = doc.getBoolean("archived");
+            isReadOnly = archived != null && archived;
 
-            if (productName.isEmpty()) {
-                Toast.makeText(ListDetailActivity.this, "Veuillez entrer un nom de produit", Toast.LENGTH_SHORT).show();
-                return;
+            if (isReadOnly) {
+                productEditText.setEnabled(false);
+                quantityEditText.setEnabled(false);
+                categorySpinner.setEnabled(false);
+                addProductButton.setEnabled(false);
+            } else {
+                addProductButton.setOnClickListener(v -> {
+                    String productName = productEditText.getText().toString().trim();
+                    String quantityStr = quantityEditText.getText().toString().trim();
+
+                    if (productName.isEmpty()) {
+                        Toast.makeText(ListDetailActivity.this, "Veuillez entrer un nom de produit", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    int quantity = 1;
+                    if (!quantityStr.isEmpty()) {
+                        try {
+                            quantity = Integer.parseInt(quantityStr);
+                        } catch (NumberFormatException e) {
+                            Toast.makeText(ListDetailActivity.this, "Quantité invalide, utilisation de 1", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    String category = CATEGORIES[categorySpinner.getSelectedItemPosition()];
+                    addProductToList(productName, quantity, category);
+                });
             }
 
-            int quantity = 1; // Valeur par défaut
-            if (!quantityStr.isEmpty()) {
-                try {
-                    quantity = Integer.parseInt(quantityStr);
-                } catch (NumberFormatException e) {
-                    Toast.makeText(ListDetailActivity.this, "Quantité invalide, utilisation de 1", Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            String category = CATEGORIES[categorySpinner.getSelectedItemPosition()];
-
-            addProductToList(productName, quantity, category);
+            loadProducts();
         });
     }
 
@@ -138,7 +142,7 @@ public class ListDetailActivity extends AppCompatActivity {
             currentSortMode = SortMode.CATEGORY;
             sortProductList();
             return true;
-        } else if (id == R.id.manage_list){
+        } else if (id == R.id.manage_list && !isReadOnly) {
             Intent intent = new Intent(this, ManageListActivity.class);
             intent.putExtra("list_id", listId);
             startActivity(intent);
@@ -157,7 +161,6 @@ public class ListDetailActivity extends AppCompatActivity {
             Collections.sort(productList, (p1, p2) -> {
                 int categoryCompare = p1.getCategory().compareToIgnoreCase(p2.getCategory());
                 if (categoryCompare == 0) {
-                    // Si même catégorie, trier par nom
                     return p1.getName().compareToIgnoreCase(p2.getName());
                 }
                 return categoryCompare;
@@ -187,7 +190,6 @@ public class ListDetailActivity extends AppCompatActivity {
                             }
                         }
 
-                        // Applique le tri actuel après chargement
                         if (currentSortMode != SortMode.NONE) {
                             sortProductList();
                         }
@@ -211,8 +213,6 @@ public class ListDetailActivity extends AppCompatActivity {
                     productEditText.setText("");
                     quantityEditText.setText("");
                     categorySpinner.setSelection(0);
-
-                    // Recharger les produits et appliquer le tri
                     loadProducts();
                 })
                 .addOnFailureListener(e -> {

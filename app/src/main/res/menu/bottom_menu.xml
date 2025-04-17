@@ -2,11 +2,13 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@+id/nav_home"
         android:title="home"
-        android:icon="@drawable/baseline_home_24"/>
+        android:icon="@drawable/baseline_home_24"
+        android:checkable="true" />
 
     <item android:id="@+id/nav_archive"
         android:title="archive"
-        android:icon="@drawable/baseline_archive_24"/>
+        android:icon="@drawable/baseline_archive_24"
+        android:checkable="true" />
 
     <item android:id="@+id/nav_add"
         android:title="add"
@@ -17,6 +19,6 @@
         android:icon="@drawable/baseline_person_24"/>
 
     <item android:id="@+id/nav_paramettre"
-        android:title="Paramettre"
+        android:title="Paramètres"
         android:icon="@drawable/baseline_settings_24"/>
 </menu>

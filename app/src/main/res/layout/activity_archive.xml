@@ -1,30 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
+    android:padding="16dp"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:padding="16dp">
+    android:layout_height="match_parent">
 
     <TextView
-        android:id="@+id/userEmailTextView"
+        android:id="@+id/archiveEmptyText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Connecté : "
-        android:textSize="16sp"
-        android:paddingBottom="8dp"/>
-
-    <TextView
-        android:id="@+id/mainEmptyText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Aucune liste active"
+        android:text="Aucune liste archivée"
         android:gravity="center"
         android:visibility="gone"
         android:textSize="16sp"
         android:padding="8dp"/>
 
     <ListView
-        android:id="@+id/listView"
+        android:id="@+id/archiveListView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"/>

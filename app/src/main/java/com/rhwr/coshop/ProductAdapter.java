@@ -18,7 +18,7 @@ public class ProductAdapter extends ArrayAdapter<Product> {
     private FirebaseFirestore db;
     private String listId;
 
-    public ProductAdapter(Context context, List<Product> products, String listId) {
+    public ProductAdapter(Context context, List<Product> products, String listId, boolean isReadOnly) {
         super(context, 0, products);
         this.listId = listId;
         this.db = FirebaseFirestore.getInstance();
