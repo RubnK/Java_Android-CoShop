@@ -3,6 +3,7 @@ package com.rhwr.coshop;
 import android.content.Intent;
 import android.view.View;
 import android.widget.FrameLayout;
+import android.widget.Toast;
 
 import androidx.annotation.LayoutRes;
 import androidx.appcompat.app.AppCompatActivity;
@@ -20,6 +21,11 @@ public abstract class BaseActivity extends AppCompatActivity {
         BottomNavigationView nav = findViewById(R.id.bottomNavigationView);
         highlightCurrentMenuItem(nav);
         setupNavigationBar(nav);
+
+        if (!(this instanceof MainActivity || this instanceof ArchiveActivity)) {
+            nav.getMenu().findItem(R.id.nav_add).setEnabled(false);
+            nav.getMenu().findItem(R.id.nav_add).getIcon().setAlpha(100); // visuellement grisé
+        }
     }
 
     private void highlightCurrentMenuItem(BottomNavigationView nav) {
@@ -61,7 +67,22 @@ public abstract class BaseActivity extends AppCompatActivity {
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 startActivity(intent);
                 return true;
+            } else if (id == R.id.nav_add) {
+                CreateListDialogFragment dialog = new CreateListDialogFragment();
+                dialog.show(getSupportFragmentManager(), "CreateListDialog");
+
+                // Désélectionner le bouton "add"
+                nav.getMenu().setGroupCheckable(0, true, false);
+                for (int i = 0; i < nav.getMenu().size(); i++) {
+                    nav.getMenu().getItem(i).setChecked(false);
+                }
+                nav.getMenu().setGroupCheckable(0, true, true);
+
+                return false; // <- Très important : indique que l’action ne "navigue" pas
             }
+
+
+
 
             return false;
         });

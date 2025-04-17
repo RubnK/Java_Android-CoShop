@@ -6,15 +6,11 @@ public class Product {
     private String category;
     private boolean purchased;
 
-    // Constructeur par défaut nécessaire pour Firestore
-    public Product() {
-    }
-
-    public Product(String name, int quantity, String category) {
+    public Product(String name, int quantity, String category, boolean purchased) {
         this.name = name;
         this.quantity = quantity;
         this.category = category;
-        this.purchased = false;  // Par défaut, le produit n'est pas acheté
+        this.purchased = purchased;
     }
 
     public String getName() {
