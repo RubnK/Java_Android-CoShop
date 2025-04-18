@@ -1,14 +1,17 @@
 package com.rhwr.coshop;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.*;
+import android.content.Intent;
+
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.messaging.FirebaseMessaging;
+
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -42,9 +45,12 @@ public class ListDetailActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setBaseContentView(R.layout.activity_list_detail);
-        setupNavigationBar(findViewById(R.id.bottomNavigationView));
+
+        BottomNavigationView nav = findViewById(R.id.bottomNavigationView);
+        setupNavigationBar(nav);
 
         db = FirebaseFirestore.getInstance();
+
         listId = getIntent().getStringExtra("list_id");
         if (listId == null) {
             Log.e("ListDetailActivity", "Liste ID est null");
@@ -58,8 +64,7 @@ public class ListDetailActivity extends BaseActivity {
         addProductButton = findViewById(R.id.addProductButton);
         productListView = findViewById(R.id.productListView);
 
-        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_dropdown_item, CATEGORIES);
+        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, CATEGORIES);
         categorySpinner.setAdapter(spinnerAdapter);
 
         productList = new ArrayList<>();
@@ -72,16 +77,21 @@ public class ListDetailActivity extends BaseActivity {
             getSupportActionBar().setTitle("Détails de la liste");
         }
 
+        saveFcmTokenToFirestore();
         checkIfArchivedAndInitialize();
+    }
+
+    private void saveFcmTokenToFirestore() {
+        FirebaseMessaging.getInstance().getToken().addOnSuccessListener(token -> {
+            String uid = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser().getUid();
+            db.collection("users").document(uid).update("token", token);
+        });
     }
 
     private void checkIfArchivedAndInitialize() {
         db.collection("lists").document(listId).get().addOnSuccessListener(doc -> {
             Boolean archived = doc.getBoolean("archived");
             isReadOnly = archived != null && archived;
-
-            adapter = new ProductAdapter(this, productList, listId, isReadOnly);
-            productListView.setAdapter(adapter);
 
             if (isReadOnly) {
                 productEditText.setEnabled(false);
@@ -90,21 +100,25 @@ public class ListDetailActivity extends BaseActivity {
                 addProductButton.setEnabled(false);
             } else {
                 addProductButton.setOnClickListener(v -> {
-                    String name = productEditText.getText().toString().trim();
+                    String productName = productEditText.getText().toString().trim();
                     String quantityStr = quantityEditText.getText().toString().trim();
+
+                    if (productName.isEmpty()) {
+                        Toast.makeText(ListDetailActivity.this, "Veuillez entrer un nom de produit", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
                     int quantity = 1;
                     if (!quantityStr.isEmpty()) {
                         try {
                             quantity = Integer.parseInt(quantityStr);
                         } catch (NumberFormatException e) {
-                            Toast.makeText(this, "Quantité invalide", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(ListDetailActivity.this, "Quantité invalide, utilisation de 1", Toast.LENGTH_SHORT).show();
                         }
                     }
 
                     String category = CATEGORIES[categorySpinner.getSelectedItemPosition()];
-                    if (!name.isEmpty()) {
-                        addProductToList(name, quantity, category);
-                    }
+                    addProductToList(productName, quantity, category);
                 });
             }
 
@@ -113,49 +127,63 @@ public class ListDetailActivity extends BaseActivity {
     }
 
     private void loadProducts() {
-        db.collection("lists").document(listId).collection("products")
+        db.collection("lists")
+                .document(listId)
+                .collection("products")
                 .get()
-                .addOnSuccessListener(query -> {
-                    productList.clear();
-                    for (DocumentSnapshot doc : query) {
-                        String name = doc.getString("name");
-                        Long quantity = doc.getLong("quantity");
-                        String category = doc.getString("category");
-                        Boolean purchased = doc.getBoolean("purchased");
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        productList.clear();
+                        for (DocumentSnapshot document : task.getResult()) {
+                            String productName = document.getString("name");
+                            Long quantityLong = document.getLong("quantity");
+                            String category = document.getString("category");
+                            Boolean purchased = document.getBoolean("purchased");
 
-                        if (name != null) {
-                            productList.add(new Product(
-                                    name,
-                                    quantity != null ? quantity.intValue() : 1,
-                                    category != null ? category : "Autre",
-                                    purchased != null && purchased
-                            ));
+                            int quantity = quantityLong != null ? quantityLong.intValue() : 1;
+
+                            if (productName != null) {
+                                Product product = new Product(
+                                        productName,
+                                        quantity,
+                                        category != null ? category : "Autre",
+                                        purchased != null && purchased
+                                );
+                                product.setPurchased(purchased != null && purchased);
+                                productList.add(product);
+                            }
                         }
+
+                        Collections.sort(productList, (p1, p2) -> {
+                            int categoryCompare = p1.getCategory().compareToIgnoreCase(p2.getCategory());
+                            if (categoryCompare == 0) {
+                                return p1.getName().compareToIgnoreCase(p2.getName());
+                            }
+                            return categoryCompare;
+                        });
+                        adapter.notifyDataSetChanged();
+                    } else {
+                        Toast.makeText(ListDetailActivity.this, "Erreur lors du chargement des produits", Toast.LENGTH_SHORT).show();
                     }
-
-                    Collections.sort(productList, (p1, p2) -> {
-                        int cmp = p1.getCategory().compareToIgnoreCase(p2.getCategory());
-                        return cmp != 0 ? cmp : p1.getName().compareToIgnoreCase(p2.getName());
-                    });
-
-                    adapter.notifyDataSetChanged();
                 });
     }
 
-    private void addProductToList(String name, int quantity, String category) {
-        Product newProduct = new Product(name, quantity, category, false);
+    private void addProductToList(String productName, int quantity, String category) {
+        Product newProduct = new Product(productName, quantity, category, false);
 
-        db.collection("lists").document(listId).collection("products")
+        db.collection("lists")
+                .document(listId)
+                .collection("products")
                 .add(newProduct)
-                .addOnSuccessListener(doc -> {
-                    Toast.makeText(this, "Produit ajouté", Toast.LENGTH_SHORT).show();
+                .addOnSuccessListener(documentReference -> {
+                    Toast.makeText(ListDetailActivity.this, "Produit ajouté", Toast.LENGTH_SHORT).show();
                     productEditText.setText("");
                     quantityEditText.setText("");
                     categorySpinner.setSelection(0);
                     loadProducts();
                 })
                 .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Erreur : " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(ListDetailActivity.this, "Erreur lors de l'ajout du produit", Toast.LENGTH_SHORT).show();
                 });
     }
 

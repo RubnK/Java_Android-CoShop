@@ -5,34 +5,30 @@ import android.graphics.Paint;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.TextView;
+import android.widget.*;
 
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.List;
 
 public class ProductAdapter extends ArrayAdapter<Product> {
-    private FirebaseFirestore db;
-    private String listId;
-    private boolean isReadOnly;
+    private final String listId;
+    private final boolean isReadOnly;
+    private final FirebaseFirestore db = FirebaseFirestore.getInstance();
 
     public ProductAdapter(Context context, List<Product> products, String listId, boolean isReadOnly) {
         super(context, 0, products);
         this.listId = listId;
-        this.db = FirebaseFirestore.getInstance();
         this.isReadOnly = isReadOnly;
     }
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
+        Product product = getItem(position);
+
         if (convertView == null) {
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.product_item, parent, false);
         }
-
-        Product product = getItem(position);
 
         TextView nameTextView = convertView.findViewById(R.id.productNameTextView);
         TextView quantityTextView = convertView.findViewById(R.id.productQuantityTextView);
@@ -46,37 +42,32 @@ public class ProductAdapter extends ArrayAdapter<Product> {
         categoryTextView.setText(product.getCategory());
         purchasedCheckBox.setChecked(product.isPurchased());
 
-        updateStrikeStyle(nameTextView, product.isPurchased());
+        setStrikeThrough(nameTextView, product.isPurchased());
 
         if (isReadOnly) {
             decreaseButton.setEnabled(false);
             increaseButton.setEnabled(false);
             purchasedCheckBox.setEnabled(false);
         } else {
+            decreaseButton.setOnClickListener(v -> {
+                int quantity = product.getQuantity();
+                if (quantity > 1) updateProductQuantity(product, quantity - 1);
+            });
+
+            increaseButton.setOnClickListener(v -> updateProductQuantity(product, product.getQuantity() + 1));
+
             purchasedCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 product.setPurchased(isChecked);
-                updateStrikeStyle(nameTextView, isChecked);
+                setStrikeThrough(nameTextView, isChecked);
                 updateProductPurchasedState(product, isChecked);
-            });
-
-            decreaseButton.setOnClickListener(v -> {
-                int currentQuantity = product.getQuantity();
-                if (currentQuantity > 1) {
-                    updateProductQuantity(product, currentQuantity - 1);
-                }
-            });
-
-            increaseButton.setOnClickListener(v -> {
-                int currentQuantity = product.getQuantity();
-                updateProductQuantity(product, currentQuantity + 1);
             });
         }
 
         return convertView;
     }
 
-    private void updateStrikeStyle(TextView textView, boolean isStruck) {
-        if (isStruck) {
+    private void setStrikeThrough(TextView textView, boolean strike) {
+        if (strike) {
             textView.setPaintFlags(textView.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
         } else {
             textView.setPaintFlags(textView.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
@@ -94,13 +85,12 @@ public class ProductAdapter extends ArrayAdapter<Product> {
                 .get()
                 .addOnSuccessListener(snapshots -> {
                     if (!snapshots.isEmpty()) {
-                        snapshots.getDocuments().get(0).getReference()
-                                .update("quantity", newQuantity);
+                        snapshots.getDocuments().get(0).getReference().update("quantity", newQuantity);
                     }
                 });
     }
 
-    private void updateProductPurchasedState(Product product, boolean isPurchased) {
+    private void updateProductPurchasedState(Product product, boolean purchased) {
         db.collection("lists")
                 .document(listId)
                 .collection("products")
@@ -108,8 +98,7 @@ public class ProductAdapter extends ArrayAdapter<Product> {
                 .get()
                 .addOnSuccessListener(snapshots -> {
                     if (!snapshots.isEmpty()) {
-                        snapshots.getDocuments().get(0).getReference()
-                                .update("purchased", isPurchased);
+                        snapshots.getDocuments().get(0).getReference().update("purchased", purchased);
                     }
                 });
     }
