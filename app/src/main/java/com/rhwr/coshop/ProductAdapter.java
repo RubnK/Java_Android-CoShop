@@ -7,6 +7,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.*;
 
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -94,6 +95,8 @@ public class ProductAdapter extends ArrayAdapter<Product> {
     }
 
     private void updateProductPurchasedState(Product product, boolean purchased) {
+        String currentUid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+
         db.collection("lists")
                 .document(listId)
                 .collection("products")
@@ -101,11 +104,14 @@ public class ProductAdapter extends ArrayAdapter<Product> {
                 .get()
                 .addOnSuccessListener(snapshots -> {
                     if (!snapshots.isEmpty()) {
-                        snapshots.getDocuments().get(0).getReference().update("purchased", purchased);
-                        // 🔥 Update lastUpdated
+                        snapshots.getDocuments().get(0).getReference().update(
+                                "purchased", purchased,
+                                "updatedBy", currentUid
+                        );
                         db.collection("lists").document(listId).update("lastUpdated", FieldValue.serverTimestamp());
                     }
                 });
     }
+
 
 }
