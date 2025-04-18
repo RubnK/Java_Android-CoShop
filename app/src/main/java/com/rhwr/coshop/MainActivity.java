@@ -36,6 +36,8 @@ public class MainActivity extends BaseActivity {
 
     private static final int REQUEST_NOTIFICATION_PERMISSION = 101;
 
+    private ListenerRegistration listListener;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -52,7 +54,6 @@ public class MainActivity extends BaseActivity {
         db = FirebaseFirestore.getInstance();
 
         FirebaseMessaging.getInstance().getToken().addOnSuccessListener(token -> Log.d("FCM", "Token: " + token));
-
 
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, listNames);
         listView.setAdapter(adapter);
@@ -79,30 +80,32 @@ public class MainActivity extends BaseActivity {
         FirebaseUser user = mAuth.getCurrentUser();
         if (user == null) return;
 
-        db.collection("lists")
-                .whereEqualTo("archived", false)
-                .get()
-                .addOnSuccessListener(snapshot -> {
+        if (listListener != null) listListener.remove();
+
+        listListener = db.collection("lists")
+                .orderBy("lastUpdated", Query.Direction.DESCENDING)
+                .addSnapshotListener((snapshot, error) -> {
+                    if (error != null || snapshot == null) {
+                        Log.e("MainActivity", "Erreur Firestore : ", error);
+                        return;
+                    }
+
                     listNames.clear();
                     listIds.clear();
 
-                    for (DocumentSnapshot doc : snapshot) {
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
                         Map<String, Object> members = (Map<String, Object>) doc.get("members");
-                        if (members != null && members.containsKey(user.getUid())) {
+                        Boolean archived = doc.getBoolean("archived");
+
+                        if (members != null && members.containsKey(user.getUid()) && (archived == null || !archived)) {
                             listNames.add(doc.getString("name"));
                             listIds.add(doc.getId());
                         }
                     }
 
-                    if (listNames.isEmpty()) {
-                        emptyTextView.setVisibility(View.VISIBLE);
-                    } else {
-                        emptyTextView.setVisibility(View.GONE);
-                    }
-
+                    emptyTextView.setVisibility(listNames.isEmpty() ? View.VISIBLE : View.GONE);
                     adapter.notifyDataSetChanged();
-                })
-                .addOnFailureListener(e -> Log.e("MainActivity", "Erreur Firestore", e));
+                });
     }
 
     private void navigateToAuthActivity() {
@@ -118,6 +121,14 @@ public class MainActivity extends BaseActivity {
                         new String[]{Manifest.permission.POST_NOTIFICATIONS},
                         REQUEST_NOTIFICATION_PERMISSION);
             }
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (listListener != null) {
+            listListener.remove();
         }
     }
 }

@@ -7,6 +7,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.*;
 
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.List;
@@ -86,6 +87,8 @@ public class ProductAdapter extends ArrayAdapter<Product> {
                 .addOnSuccessListener(snapshots -> {
                     if (!snapshots.isEmpty()) {
                         snapshots.getDocuments().get(0).getReference().update("quantity", newQuantity);
+                        // 🔥 Update lastUpdated
+                        db.collection("lists").document(listId).update("lastUpdated", FieldValue.serverTimestamp());
                     }
                 });
     }
@@ -99,7 +102,10 @@ public class ProductAdapter extends ArrayAdapter<Product> {
                 .addOnSuccessListener(snapshots -> {
                     if (!snapshots.isEmpty()) {
                         snapshots.getDocuments().get(0).getReference().update("purchased", purchased);
+                        // 🔥 Update lastUpdated
+                        db.collection("lists").document(listId).update("lastUpdated", FieldValue.serverTimestamp());
                     }
                 });
     }
+
 }

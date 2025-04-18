@@ -11,9 +11,12 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.firestore.FieldValue;
+
 
 import java.util.ArrayList;
 import java.util.Collections;
+
 
 public class ListDetailActivity extends BaseActivity {
     private EditText productEditText;
@@ -130,41 +133,43 @@ public class ListDetailActivity extends BaseActivity {
         db.collection("lists")
                 .document(listId)
                 .collection("products")
-                .get()
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        productList.clear();
-                        for (DocumentSnapshot document : task.getResult()) {
-                            String productName = document.getString("name");
-                            Long quantityLong = document.getLong("quantity");
-                            String category = document.getString("category");
-                            Boolean purchased = document.getBoolean("purchased");
-
-                            int quantity = quantityLong != null ? quantityLong.intValue() : 1;
-
-                            if (productName != null) {
-                                Product product = new Product(
-                                        productName,
-                                        quantity,
-                                        category != null ? category : "Autre",
-                                        purchased != null && purchased
-                                );
-                                product.setPurchased(purchased != null && purchased);
-                                productList.add(product);
-                            }
-                        }
-
-                        Collections.sort(productList, (p1, p2) -> {
-                            int categoryCompare = p1.getCategory().compareToIgnoreCase(p2.getCategory());
-                            if (categoryCompare == 0) {
-                                return p1.getName().compareToIgnoreCase(p2.getName());
-                            }
-                            return categoryCompare;
-                        });
-                        adapter.notifyDataSetChanged();
-                    } else {
-                        Toast.makeText(ListDetailActivity.this, "Erreur lors du chargement des produits", Toast.LENGTH_SHORT).show();
+                .addSnapshotListener((snapshots, e) -> {
+                    if (e != null) {
+                        Toast.makeText(ListDetailActivity.this, "Erreur de synchronisation", Toast.LENGTH_SHORT).show();
+                        return;
                     }
+
+                    if (snapshots == null) return;
+
+                    productList.clear();
+                    for (DocumentSnapshot document : snapshots.getDocuments()) {
+                        String productName = document.getString("name");
+                        Long quantityLong = document.getLong("quantity");
+                        String category = document.getString("category");
+                        Boolean purchased = document.getBoolean("purchased");
+
+                        int quantity = quantityLong != null ? quantityLong.intValue() : 1;
+
+                        if (productName != null) {
+                            Product product = new Product(
+                                    productName,
+                                    quantity,
+                                    category != null ? category : "Autre",
+                                    purchased != null && purchased
+                            );
+                            product.setPurchased(purchased != null && purchased);
+                            productList.add(product);
+                        }
+                    }
+
+                    Collections.sort(productList, (p1, p2) -> {
+                        int categoryCompare = p1.getCategory().compareToIgnoreCase(p2.getCategory());
+                        if (categoryCompare == 0) {
+                            return p1.getName().compareToIgnoreCase(p2.getName());
+                        }
+                        return categoryCompare;
+                    });
+                    adapter.notifyDataSetChanged();
                 });
     }
 
@@ -176,6 +181,9 @@ public class ListDetailActivity extends BaseActivity {
                 .collection("products")
                 .add(newProduct)
                 .addOnSuccessListener(documentReference -> {
+                    // 🔥 Update lastUpdated
+                    db.collection("lists").document(listId).update("lastUpdated", FieldValue.serverTimestamp());
+
                     Toast.makeText(ListDetailActivity.this, "Produit ajouté", Toast.LENGTH_SHORT).show();
                     productEditText.setText("");
                     quantityEditText.setText("");
@@ -186,6 +194,7 @@ public class ListDetailActivity extends BaseActivity {
                     Toast.makeText(ListDetailActivity.this, "Erreur lors de l'ajout du produit", Toast.LENGTH_SHORT).show();
                 });
     }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

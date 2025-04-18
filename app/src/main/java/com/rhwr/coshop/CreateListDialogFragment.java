@@ -49,12 +49,13 @@ public class CreateListDialogFragment extends DialogFragment {
             FirebaseUser user = mAuth.getCurrentUser();
             if (user == null) return;
 
-            // Préparation de la liste avec intégration directe du créateur comme admin
+            // Création de la liste avec tous les champs nécessaires
             Map<String, Object> list = new HashMap<>();
             list.put("name", listName);
             list.put("createdAt", new Date());
+            list.put("lastUpdated", new Date()); // ✅ Champ ajouté pour le tri
             list.put("archived", false);
-            list.put("members", Collections.singletonMap(user.getUid(), "admin")); // clé = UID, valeur = "admin"
+            list.put("members", Collections.singletonMap(user.getUid(), "admin"));
 
             db.collection("lists").add(list)
                     .addOnSuccessListener(docRef -> {
