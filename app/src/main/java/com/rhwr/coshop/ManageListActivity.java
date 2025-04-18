@@ -7,7 +7,6 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.provider.ContactsContract;
-import android.util.Log;
 import android.view.View;
 import android.widget.*;
 import androidx.annotation.Nullable;
@@ -33,6 +32,7 @@ public class ManageListActivity extends AppCompatActivity {
     private FirebaseUser currentUser;
     private String listId;
     private String listOwnerId;
+    private boolean isArchived = false;
 
     private Map<String, String> uidToUsername = new HashMap<>();
     private Set<String> memberUids = new HashSet<>();
@@ -72,7 +72,13 @@ public class ManageListActivity extends AppCompatActivity {
         }
 
         saveButton.setOnClickListener(v -> updateListMembers());
-        archiveButton.setOnClickListener(v -> archiveList());
+        archiveButton.setOnClickListener(v -> {
+            if (isArchived) {
+                unarchiveList();
+            } else {
+                archiveList();
+            }
+        });
         leaveButton.setOnClickListener(v -> leaveList());
     }
 
@@ -126,6 +132,8 @@ public class ManageListActivity extends AppCompatActivity {
                         if (!doc.exists()) return;
 
                         Map<String, Object> membersMap = (Map<String, Object>) doc.get("members");
+                        isArchived = Boolean.TRUE.equals(doc.getBoolean("archived"));
+
                         if (membersMap != null) {
                             memberUids.clear();
                             for (Map.Entry<String, Object> entry : membersMap.entrySet()) {
@@ -143,9 +151,11 @@ public class ManageListActivity extends AppCompatActivity {
     }
 
     private void updateUI() {
-        saveButton.setVisibility(isAdmin ? View.VISIBLE : View.GONE);
+        saveButton.setVisibility((isAdmin && !isArchived) ? View.VISIBLE : View.GONE);
         archiveButton.setVisibility(isAdmin ? View.VISIBLE : View.GONE);
+        archiveButton.setText(isArchived ? "Désarchiver" : "Archiver");
         leaveButton.setVisibility(!isAdmin ? View.VISIBLE : View.GONE);
+
         displayMembers();
         displayContacts();
     }
@@ -154,14 +164,14 @@ public class ManageListActivity extends AppCompatActivity {
         List<String> displayNames = new ArrayList<>();
         for (String uid : memberUids) {
             String username = uidToUsername.get(uid);
-            String suffix = uid.equals(currentUser.getUid()) ? " (vous)" : (isAdmin ? " ❌" : "");
+            String suffix = uid.equals(currentUser.getUid()) ? " (vous)" : (isAdmin && !isArchived ? " ❌" : "");
             displayNames.add((username != null ? username : uid) + suffix);
         }
 
         membersAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, displayNames);
         membersListView.setAdapter(membersAdapter);
 
-        if (isAdmin) {
+        if (isAdmin && !isArchived) {
             membersListView.setOnItemClickListener((parent, view, position, id) -> {
                 String uid = new ArrayList<>(memberUids).get(position);
                 if (!uid.equals(currentUser.getUid())) {
@@ -192,7 +202,7 @@ public class ManageListActivity extends AppCompatActivity {
             contactsAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, contacts);
             contactsListView.setAdapter(contactsAdapter);
 
-            if (isAdmin) {
+            if (isAdmin && !isArchived) {
                 contactsListView.setOnItemClickListener((parent, view, position, id) -> {
                     String username = contacts.get(position);
                     String uidToAdd = null;
@@ -227,8 +237,20 @@ public class ManageListActivity extends AppCompatActivity {
         db.collection("lists").document(listId)
                 .update("archived", true)
                 .addOnSuccessListener(unused -> {
-                    Toast.makeText(this, "Liste archiviée", Toast.LENGTH_SHORT).show();
-                    finish();
+                    Toast.makeText(this, "Liste archivée", Toast.LENGTH_SHORT).show();
+                    isArchived = true;
+                    updateUI();
+                })
+                .addOnFailureListener(e -> Toast.makeText(this, "Erreur : " + e.getMessage(), Toast.LENGTH_SHORT).show());
+    }
+
+    private void unarchiveList() {
+        db.collection("lists").document(listId)
+                .update("archived", false)
+                .addOnSuccessListener(unused -> {
+                    Toast.makeText(this, "Liste désarchivée", Toast.LENGTH_SHORT).show();
+                    isArchived = false;
+                    updateUI();
                 })
                 .addOnFailureListener(e -> Toast.makeText(this, "Erreur : " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }

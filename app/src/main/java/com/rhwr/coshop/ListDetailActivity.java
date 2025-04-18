@@ -96,6 +96,12 @@ public class ListDetailActivity extends BaseActivity {
             Boolean archived = doc.getBoolean("archived");
             isReadOnly = archived != null && archived;
 
+            // ✅ Afficher le vrai nom de la liste dans la toolbar
+            String listName = doc.getString("name");
+            if (getSupportActionBar() != null && listName != null) {
+                getSupportActionBar().setTitle(listName);
+            }
+
             if (isReadOnly) {
                 productEditText.setEnabled(false);
                 quantityEditText.setEnabled(false);
@@ -128,6 +134,7 @@ public class ListDetailActivity extends BaseActivity {
             loadProducts();
         });
     }
+
 
     private void loadProducts() {
         db.collection("lists")
@@ -206,7 +213,7 @@ public class ListDetailActivity extends BaseActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
 
-        if (id == R.id.manage_list && !isReadOnly) {
+        if (id == R.id.manage_list) {
             Intent intent = new Intent(this, ManageListActivity.class);
             intent.putExtra("list_id", listId);
             startActivity(intent);
